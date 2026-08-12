@@ -1,6 +1,6 @@
 """Structured data models shared across the graph."""
 
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -28,4 +28,28 @@ class ResearchPlan(BaseModel):
     search_queries: List[str] = Field(
         default_factory=list,
         description="Expanded search queries to use for retrieval",
+    )
+
+
+# Milestone 2 schemas
+
+class RetrievedPaper(BaseModel):
+    """A paper retrieved from arXiv."""
+
+    paper_id: str = Field(..., description="arXiv ID")
+    title: str
+    authors: List[str]
+    abstract: str
+    published: Optional[str] = None
+    pdf_url: Optional[str] = None
+
+
+class RAGAnswer(BaseModel):
+    """An answer to a sub-question, grounded in retrieved evidence."""
+
+    question: str
+    answer: str
+    sources: List[str] = Field(
+        default_factory=list,
+        description="List of paper IDs used to generate this answer",
     )
