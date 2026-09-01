@@ -53,3 +53,25 @@ class RAGAnswer(BaseModel):
         default_factory=list,
         description="List of paper IDs used to generate this answer",
     )
+
+
+# Milestone 3 schemas
+
+class PaperRecord(BaseModel):
+    """A structured summary of a single paper, extracted from its abstract."""
+
+    paper_id: str = Field(..., description="arXiv ID, links back to RetrievedPaper")
+    title: str
+
+    method: Optional[str] = Field(
+        None, description="The core method/approach the paper proposes, in 1-2 sentences"
+    )
+    dataset: Optional[str] = Field(
+        None, description="Dataset(s) or benchmark(s) used for evaluation, if named"
+    )
+    results: Optional[str] = Field(
+        None, description="Key reported result(s), e.g. a metric improvement, if stated"
+    )
+    limitations: Optional[str] = Field(
+        None, description="Limitations or weaknesses the paper itself acknowledges, if any"
+    )

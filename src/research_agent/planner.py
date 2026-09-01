@@ -1,8 +1,12 @@
 """Planner Agent: decomposes a research topic into a structured plan."""
 
-from research_agent.config import get_llm
+import logging
+
+from research_agent.config import STRUCTURED_TEMPERATURE, STRUCTURED_MODEL, get_llm
 from research_agent.schemas import ResearchPlan
 from research_agent.state import GraphState
+
+logger = logging.getLogger(__name__)
 
 PLANNER_SYSTEM_PROMPT = """\
 You are the Research Planning Agent inside an autonomous research assistant.
@@ -19,7 +23,9 @@ Guidelines:
 
 def run_planner(state: GraphState) -> GraphState:
     """LangGraph node: reads state['topic'], writes state['plan']."""
-    llm = get_llm()
+    logger.info("Planning research on topic: %s", state["topic"])
+
+    llm = get_llm(model=STRUCTURED_MODEL, temperature=STRUCTURED_TEMPERATURE)
     structured_llm = llm.with_structured_output(ResearchPlan)
 
     plan = structured_llm.invoke([
@@ -27,4 +33,9 @@ def run_planner(state: GraphState) -> GraphState:
         ("human", f"Research topic: {state['topic']}"),
     ])
 
+    logger.info(
+        "Plan ready: %d objectives, %d search queries",
+        len(plan.objectives),
+        len(plan.search_queries),
+    )
     return {**state, "plan": plan}

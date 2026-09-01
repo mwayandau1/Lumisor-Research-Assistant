@@ -40,6 +40,14 @@ def main() -> None:
             if ans.sources:
                 print(f"   Sources: {', '.join(ans.sources)}")
 
+    # Milestone 3: Extracted structured records
+    if result.get("extracted_records"):
+        print("\n" + "=" * 60)
+        print(f"EXTRACTED RECORDS ({len(result['extracted_records'])})")
+        print("=" * 60)
+        for rec in result["extracted_records"]:
+            print(json.dumps(rec.model_dump(), indent=2))
+
 
 if __name__ == "__main__":
     main()

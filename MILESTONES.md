@@ -33,28 +33,43 @@ Status legend: `[x]` done · `[ ]` not started
 
 ---
 
-## [ ] Milestone 2 — Single-source retrieval + RAG
+## [x] Milestone 2 — Single-source retrieval + RAG
 
 **Goal:** answer the planner's sub-questions with real, grounded evidence.
 
-- Pick ONE source first — arXiv (matches your thesis domain).
-- Fetch papers → chunk → embed → store in Pinecone (reuse the pattern from the TA project).
-- Add a retrieval node that answers each sub-question from the plan using RAG.
+- Source: arXiv.
+- Fetch papers → chunk abstracts → embed (OpenAI `text-embedding-3-small` via OpenRouter) →
+  store in Supabase/pgvector (switched from the original Pinecone plan — reuses the
+  same embed-then-similarity-search pattern, just a different vector store).
+- A retrieval node answers each sub-question from the plan using RAG.
 
-**Add to state:** `retrieved_papers`, `rag_answers`
+**Implemented in:** `research_agent/retriever.py` (arXiv search, chunking, embedding,
+Supabase similarity search), `research_agent/rag.py` (retrieval node), `sql/001_paper_chunks.sql`
+(pgvector table + `match_paper_chunks` function).
+
+**Note:** only abstracts are embedded (no full-text PDF parsing) — enough for RAG
+answers, but a real limitation for Milestone 3's extraction (see below).
 
 **Demo:** planner → arXiv search → RAG-grounded answers per sub-question.
 
 ---
 
-## [ ] Milestone 3 — Structured paper extraction
+## [x] Milestone 3 — Structured paper extraction
 
 **Goal:** make retrieval "smart" instead of just returning raw chunks.
 
-- For each retrieved paper, extract: title, method, dataset, results, limitations into a structured schema (e.g. `PaperRecord`).
-- Build this now while the dataset is small — it's the foundation for comparison and contradiction detection later.
+- For each retrieved paper, extract: title, method, dataset, results, limitations into a
+  structured schema (`PaperRecord`).
+- Because only abstracts are available (see Milestone 2 note), fields the abstract
+  doesn't state are returned as `null` rather than guessed — extraction is grounded
+  in what's actually retrievable, not hallucinated to fill the schema.
+
+**Implemented in:** `research_agent/schemas.py` (`PaperRecord`), `research_agent/extraction.py`
 
 **Add to state:** `extracted_records`
+
+**Demo:** planner → retrieval → each paper's abstract distilled into a structured record,
+with a per-field missing-count logged (signal for how much the abstract-only limitation bites).
 
 ---
 
