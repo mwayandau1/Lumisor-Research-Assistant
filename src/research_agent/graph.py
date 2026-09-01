@@ -2,6 +2,7 @@
 
 from langgraph.graph import END, StateGraph
 
+from research_agent.extraction import run_extraction
 from research_agent.planner import run_planner
 from research_agent.rag import run_retrieval
 from research_agent.state import GraphState
@@ -13,10 +14,12 @@ def build_graph():
 
     graph.add_node("planner", run_planner)
     graph.add_node("retrieval", run_retrieval)
+    graph.add_node("extraction", run_extraction)
 
     graph.set_entry_point("planner")
     graph.add_edge("planner", "retrieval")
-    graph.add_edge("retrieval", END)
+    graph.add_edge("retrieval", "extraction")
+    graph.add_edge("extraction", END)
 
     return graph.compile()
 

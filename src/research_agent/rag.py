@@ -1,9 +1,13 @@
 """Milestone 2: Retrieval node - fetches papers and answers sub-questions via RAG."""
 
+import logging
+
 from research_agent.config import get_llm
 from research_agent.retriever import embed_and_store, search_arxiv, similarity_search
 from research_agent.schemas import RAGAnswer, RetrievedPaper
 from research_agent.state import GraphState
+
+logger = logging.getLogger(__name__)
 
 RAG_SYSTEM_PROMPT = """\
 You are a research assistant. Answer the question based ONLY on the provided context.
@@ -28,9 +32,11 @@ def run_retrieval(state: GraphState) -> GraphState:
             all_papers[p.paper_id] = p
 
     retrieved = list(all_papers.values())
+    logger.info("Retrieved %d unique papers from arXiv", len(retrieved))
 
     # 2. Embed and store in Supabase
-    embed_and_store(retrieved)
+    stored = embed_and_store(retrieved)
+    logger.info("Embedded and stored %d new chunks", stored)
 
     # 3. Answer each sub-question via RAG
     llm = get_llm()
@@ -40,6 +46,7 @@ def run_retrieval(state: GraphState) -> GraphState:
         for question in obj.sub_questions:
             # Retrieve relevant chunks
             chunks = similarity_search(question, top_k=5)
+            logger.info("Q: %s -> %d chunks retrieved", question, len(chunks))
 
             if not chunks:
                 rag_answers.append(

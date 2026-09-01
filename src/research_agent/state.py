@@ -2,7 +2,7 @@
 
 from typing import List, Optional, TypedDict
 
-from research_agent.schemas import RAGAnswer, ResearchPlan, RetrievedPaper
+from research_agent.schemas import PaperRecord, RAGAnswer, ResearchPlan, RetrievedPaper
 
 
 class GraphState(TypedDict, total=False):
@@ -15,3 +15,6 @@ class GraphState(TypedDict, total=False):
     # Milestone 2
     retrieved_papers: List[RetrievedPaper]
     rag_answers: List[RAGAnswer]
+
+    # Milestone 3
+    extracted_records: List[PaperRecord]
