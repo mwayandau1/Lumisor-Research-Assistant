@@ -73,13 +73,68 @@ with a per-field missing-count logged (signal for how much the abstract-only lim
 
 ---
 
-## [ ] Milestone 4 — Second source + parallel retrieval
+## [x] Milestone 4 — Second source + parallel retrieval
 
 **Goal:** improve recall without over-engineering source count.
 
-- Add Semantic Scholar or GitHub as a second source.
-- Run retrieval agents in parallel via LangGraph, merge results.
-- Only add a third source later if the first two are solid — clean extraction matters more than raw recall.
+- Second source: **Semantic Scholar** (Graph API). Chosen over GitHub because arXiv
+  only indexes preprints — it is blind to venue-only publications and to most older
+  literature, which is exactly the gap Semantic Scholar fills. It also reports DOIs
+  and citation counts arXiv doesn't, both of which Milestone 6 needs for citations.
+- Retrieval nodes run **in parallel** via LangGraph fan-out/fan-in:
+
+  ```
+  planner ─┬─> arxiv ────────────────┬─> merge_sources ─> rag ─> extraction
+           └─> semantic_scholar ─────┘
+  ```
+
+  Both source nodes sit in the same superstep, so two sources cost about as much
+  wall-clock as the slower one instead of the sum (measured: 3.0s vs 6.0s
+  sequential on a stubbed 3-query run).
+- **Merge** deduplicates across sources on arXiv ID → DOI → normalised title, and
+  folds duplicate records together rather than picking one: the longer abstract
+  wins, and missing fields are back-filled, so an abstract-less Semantic Scholar
+  record is rescued by the arXiv copy of the same paper.
+
+**Implemented in:** `research_agent/semantic_scholar.py` (API client with retry/backoff),
+`research_agent/search.py` (parallel source nodes, circuit breaker, dedup/merge),
+`research_agent/graph.py` (fan-out/fan-in wiring), `sql/002_paper_source.sql`
+(`source` column so chunks stay traceable across runs).
+
+**Add to state:** `source_results` (with an `operator.add` reducer — without it
+LangGraph treats two parallel writes to one key as a conflict and raises),
+`merge_stats`.
+
+**Two things this milestone forced that are worth keeping:**
+
+1. **Sources fail independently.** The Semantic Scholar API is usable without a key
+   but shares one small global rate-limit pool, so HTTP 429 is the *normal* response
+   rather than an exceptional one. A failing source therefore reports an error on its
+   `SourceResult` instead of raising — the run continues on whatever sources answered.
+   A circuit breaker abandons a source after 2 consecutive failed queries so a dead
+   source costs seconds, not the full retry budget on every query. Set
+   `SEMANTIC_SCHOLAR_API_KEY` (free) to actually get results from this source.
+2. **Recall has to be measurable, not assumed.** `MergeStats` reports per-source
+   counts, unique papers after dedup, and how many papers *both* sources found. If
+   overlap approaches the unique count, the second source is only re-finding what
+   arXiv already had — that's the number that decides whether a third source is
+   worth adding.
+
+   Measured on `"memory poisoning LLM agents"` (5 results per source): arXiv 5 +
+   Semantic Scholar 5 → **8 unique, 2 collapsed cross-source**. So the second
+   source was worth +3 papers (+60% recall), and the overlap is low enough to
+   justify it. The three S2-only papers are exactly the kind arXiv structurally
+   cannot rank for: a venue publication with an IEEE DOI, and AgentPoison
+   (465 citations) which arXiv's relevance ordering missed entirely. The two
+   collapsed records kept arXiv's canonical ID while gaining the DOI and citation
+   count only Semantic Scholar reports.
+
+**Demo:** `uv run python scripts/test_sources.py` — offline dedup checks (no network,
+no API keys) plus a live per-source recall comparison. Or `POST /search` with
+`{"queries": [...]}` for the same comparison over HTTP at zero LLM cost.
+
+**Note:** only add a third source once these two are solid — clean extraction matters
+more than raw recall.
 
 ---
 

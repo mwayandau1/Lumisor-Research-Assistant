@@ -1,8 +1,16 @@
 """Shared state passed between LangGraph nodes."""
 
-from typing import List, Optional, TypedDict
+import operator
+from typing import Annotated, List, Optional, TypedDict
 
-from research_agent.schemas import PaperRecord, RAGAnswer, ResearchPlan, RetrievedPaper
+from research_agent.schemas import (
+    MergeStats,
+    PaperRecord,
+    RAGAnswer,
+    ResearchPlan,
+    RetrievedPaper,
+    SourceResult,
+)
 
 
 class GraphState(TypedDict, total=False):
@@ -18,3 +26,10 @@ class GraphState(TypedDict, total=False):
 
     # Milestone 3
     extracted_records: List[PaperRecord]
+
+    # Milestone 4
+    # The source nodes run concurrently and all write this one key, so it needs
+    # a reducer: without `operator.add` LangGraph treats two writes in the same
+    # superstep as a conflict and raises instead of merging them.
+    source_results: Annotated[List[SourceResult], operator.add]
+    merge_stats: Optional[MergeStats]

@@ -37,6 +37,29 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "openai/text-embedding-3-small")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
+# Retrieval (Milestone 2/4)
+# How many of the planner's expanded queries each source runs, and how many
+# papers it asks for per query. Both were hardcoded in the retrieval node before
+# Milestone 4; with two sources fanning out in parallel they multiply, so they
+# belong somewhere you can turn them down without editing a node.
+MAX_SEARCH_QUERIES = int(os.getenv("MAX_SEARCH_QUERIES", "5"))
+RESULTS_PER_QUERY = int(os.getenv("RESULTS_PER_QUERY", "3"))
+
+# Semantic Scholar (Milestone 4 second source).
+# The API works without a key, but unauthenticated traffic shares one small
+# global rate-limit pool, so 429s are routine - hence the retry/backoff in
+# semantic_scholar.py. A free key raises the limit substantially.
+SEMANTIC_SCHOLAR_API_KEY = os.getenv("SEMANTIC_SCHOLAR_API_KEY")
+SEMANTIC_SCHOLAR_TIMEOUT = float(os.getenv("SEMANTIC_SCHOLAR_TIMEOUT", "20"))
+
+# Sources the retrieval fan-out is allowed to use. Trim this to run a
+# single-source comparison, or to skip a source that is rate-limiting you.
+ENABLED_SOURCES = [
+    s.strip()
+    for s in os.getenv("ENABLED_SOURCES", "arxiv,semantic_scholar").split(",")
+    if s.strip()
+]
+
 
 def get_llm(model: str = PLANNER_MODEL, temperature: float = PLANNER_TEMPERATURE) -> ChatOpenAI:
     """Return a ChatOpenAI client routed through OpenRouter."""
