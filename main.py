@@ -22,13 +22,31 @@ def main() -> None:
     print("=" * 60)
     print(json.dumps(result["plan"].model_dump(), indent=2))
 
+    # Milestone 4: what each source contributed, and what the merge saved
+    stats = result.get("merge_stats")
+    if stats:
+        print("\n" + "=" * 60)
+        print("SOURCE MERGE")
+        print("=" * 60)
+        for source, count in stats.per_source.items():
+            print(f"  {source:<22} {count} papers")
+        print(f"  {'-' * 40}")
+        print(f"  {'total before dedup':<22} {stats.total_before_dedup}")
+        print(f"  {'unique after merge':<22} {stats.unique_papers}")
+        print(f"  {'found by >1 source':<22} {stats.overlap_papers}")
+        if stats.dropped_no_abstract:
+            print(f"  {'dropped (no abstract)':<22} {stats.dropped_no_abstract}")
+        for source, error in stats.errors.items():
+            print(f"  !! {source} returned nothing: {error}")
+
     # Milestone 2: Retrieved papers and RAG answers
     if result.get("retrieved_papers"):
         print("\n" + "=" * 60)
         print(f"RETRIEVED PAPERS ({len(result['retrieved_papers'])})")
         print("=" * 60)
         for p in result["retrieved_papers"]:
-            print(f"  [{p.paper_id}] {p.title}")
+            found_by = "+".join(p.found_by) if p.found_by else p.source
+            print(f"  [{p.paper_id}] ({found_by}) {p.title}")
 
     if result.get("rag_answers"):
         print("\n" + "=" * 60)
